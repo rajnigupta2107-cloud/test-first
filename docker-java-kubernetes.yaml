@@ -13,6 +13,23 @@ spec:
       labels:
         service: server
     spec:
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
+      initContainers:
+        - name: init-permissions
+          image: busybox:1.36
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -eux;
+              mkdir -p /data/h2;
+              chmod -R 0777 /data;
+          volumeMounts:
+            - name: app-data
+              mountPath: /data
       containers:
         - name: server-service
           image: rajnigupta21/test-first
