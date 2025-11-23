@@ -9,7 +9,7 @@ public class HelloController {
     // Root endpoint returns a simple plain text body
     @GetMapping(path = "/", produces = "text/plain;charset=UTF-8")
     public String hello() {
-        return "hello world!!";
+        return "hello world for new application!!";
     }
 
     // Lightweight liveness probe to help troubleshoot "empty reply" issues
