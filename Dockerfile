@@ -1,23 +1,26 @@
 
-FROM gradle:8.10.2-jdk17 AS build
+FROM gradle:8.11.1-jdk17 AS build
 
 WORKDIR /home/gradle/src
 
 # Cache dependencies by copying only the build configuration first
 COPY build.gradle settings.gradle ./
-RUN gradle --no-daemon dependencies || true
+# Generate and pin Gradle Wrapper to a version that supports newer JDKs
+RUN gradle --no-daemon wrapper --gradle-version 8.11.1 \
+  && ./gradlew --no-daemon --version \
+  && ./gradlew --no-daemon dependencies || true
 
 # Copy the application sources
 COPY src ./src
 
 # Build the Spring Boot fat jar
-RUN gradle --no-daemon clean bootJar -x test
+RUN ./gradlew --no-daemon clean bootJar -x test
 
 ################################################################################
 
 # Dedicated stage to run tests for CI
 FROM build AS test
-RUN gradle --no-daemon test
+RUN ./gradlew --no-daemon test
 
 
 ################################################################################
