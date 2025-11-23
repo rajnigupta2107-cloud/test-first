@@ -4,7 +4,8 @@ FROM gradle:8.11.1-jdk17 AS build
 WORKDIR /home/gradle/src
 
 # Cache dependencies by copying only the build configuration first
-COPY build.gradle settings.gradle ./
+# Include gradle.properties so toolchain settings (e.g., auto-download) are respected
+COPY build.gradle settings.gradle gradle.properties ./
 # Generate and pin Gradle Wrapper to a version that supports newer JDKs
 RUN gradle --no-daemon wrapper --gradle-version 8.11.1 \
   && ./gradlew --no-daemon --version \
