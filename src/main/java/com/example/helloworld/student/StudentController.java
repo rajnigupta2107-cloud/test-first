@@ -31,6 +31,12 @@ public class StudentController {
         return ResponseEntity.created(URI.create("/students/" + saved.getId())).body(saved);
     }
 
+    // List all
+    @GetMapping
+    public java.util.List<Student> list() {
+        return repository.findAll();
+    }
+
     // Read by ID
     @GetMapping("/{id}")
     public Student getOne(@PathVariable Long id) {

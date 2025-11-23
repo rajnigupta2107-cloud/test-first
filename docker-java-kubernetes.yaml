@@ -17,6 +17,22 @@ spec:
         - name: server-service
           image: rajnigupta21/test-first
           imagePullPolicy: Always
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: h2file
+          ports:
+            - containerPort: 5001
+          volumeMounts:
+            - name: app-data
+              mountPath: /data
+      volumes:
+        # For local clusters (kind/minikube/microk8s), you can use a hostPath to share
+        # the same directory with your local machine. Ensure the path exists on the node.
+        # Warning: hostPath is suitable for local/dev only.
+        - name: app-data
+          hostPath:
+            path: /tmp/test-first-data
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service

@@ -13,6 +13,12 @@ services:
       context: .
     ports:
       - 5001:5001
+    environment:
+      # Switch to file-based H2 so data is persisted to a mounted volume
+      - SPRING_PROFILES_ACTIVE=h2file
+    volumes:
+      # Persist H2 database files on the host so they can be reused by other containers
+      - ./data:/data
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to
