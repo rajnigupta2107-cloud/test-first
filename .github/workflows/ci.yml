@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     # Run deploy only on main and only if a KUBE_CONFIG secret is provided
-    if: github.ref == 'refs/heads/main' && secrets.KUBE_CONFIG != ''
+    if: ${{ github.ref == 'refs/heads/main' && secrets.KUBE_CONFIG != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
