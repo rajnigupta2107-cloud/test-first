@@ -1,27 +1,34 @@
 
+# syntax=docker/dockerfile:1.7
 FROM gradle:8.11.1-jdk17 AS build
 
 WORKDIR /home/gradle/src
 
-# Cache dependencies by copying only the build configuration first
-# Include gradle.properties so toolchain settings (e.g., auto-download) are respected
+# Copy Gradle wrapper and build config separately to maximize Docker layer caching
+COPY gradlew ./
+COPY gradle/wrapper ./gradle/wrapper
 COPY build.gradle settings.gradle gradle.properties ./
-# Generate and pin Gradle Wrapper to a version that supports newer JDKs
-RUN gradle --no-daemon wrapper --gradle-version 8.11.1 \
-  && ./gradlew --no-daemon --version \
-  && ./gradlew --no-daemon dependencies || true
 
-# Copy the application sources
+## Verify wrapper and warm up dependency cache without sources
+## Use BuildKit cache mounts to persist Gradle caches between Docker builds
+RUN --mount=type=cache,target=/home/gradle/.gradle \
+    bash -lc 'set -e; chmod +x ./gradlew; ./gradlew --no-daemon --version; ./gradlew --no-daemon -g /home/gradle/.gradle dependencies || true'
+
+# Note: We copy sources only after dependency cache warm-up so source changes do not
+# invalidate dependency layers and keep builds fast.
 COPY src ./src
 
-# Build the Spring Boot fat jar
-RUN ./gradlew --no-daemon clean bootJar -x test
+# Build the Spring Boot fat jar (skip tests in image build; tests run in dedicated stage)
+# Avoid 'clean' to leverage Gradle incremental compilation across Docker layers
+RUN --mount=type=cache,target=/home/gradle/.gradle \
+    ./gradlew --no-daemon -g /home/gradle/.gradle bootJar -x test
 
 ################################################################################
 
 # Dedicated stage to run tests for CI
 FROM build AS test
-RUN ./gradlew --no-daemon test
+RUN --mount=type=cache,target=/home/gradle/.gradle \
+    ./gradlew --no-daemon -g /home/gradle/.gradle test
 
 
 ################################################################################

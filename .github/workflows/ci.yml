@@ -33,6 +33,8 @@ jobs:
           context: .
           target: test
           load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: "Build and push (target: final)"
         uses: docker/build-push-action@v6
@@ -42,6 +44,8 @@ jobs:
           push: true
           target: final
           tags: ${{ vars.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
     name: Deploy to Kubernetes
@@ -58,11 +62,33 @@ jobs:
           version: 'v1.30.0'
 
       - name: Configure kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "$KUBE_CONFIG" > ~/.kube/config
+        shell: bash
         env:
           KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.kube
+          if [[ -z "${KUBE_CONFIG:-}" ]]; then
+            echo "KUBE_CONFIG secret is empty; cannot configure access to cluster" >&2
+            exit 1
+          fi
+          # If the secret already looks like YAML (has apiVersion/clusters), write as-is;
+          # otherwise, assume it's base64-encoded and decode it first.
+          if echo "$KUBE_CONFIG" | grep -qE "apiVersion:|clusters:"; then
+            printf "%s\n" "$KUBE_CONFIG" > ~/.kube/config
+          else
+            echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+          fi
+          chmod 600 ~/.kube/config
+          # Export for subsequent steps in this job
+          echo "KUBECONFIG=$HOME/.kube/config" >> "$GITHUB_ENV"
+
+      - name: Kubectl preflight check
+        run: |
+          kubectl version --output=yaml
+          kubectl config get-contexts || true
+          echo "Current context: $(kubectl config current-context)"
+          kubectl cluster-info
 
       - name: Apply Kubernetes manifests
         run: |
