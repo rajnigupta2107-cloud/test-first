@@ -9,10 +9,10 @@ COPY gradlew ./
 COPY gradle/wrapper ./gradle/wrapper
 COPY build.gradle settings.gradle gradle.properties ./
 
-## Verify wrapper and warm up dependency cache without sources
+## Verify Gradle and warm up dependency cache without sources
 ## Use BuildKit cache mounts to persist Gradle caches between Docker builds
 RUN --mount=type=cache,target=/home/gradle/.gradle \
-    bash -lc 'set -e; chmod +x ./gradlew; ./gradlew --no-daemon --version; ./gradlew --no-daemon -g /home/gradle/.gradle dependencies || true'
+    bash -lc 'set -e; gradle --no-daemon --version; gradle --no-daemon -g /home/gradle/.gradle dependencies || true'
 
 # Note: We copy sources only after dependency cache warm-up so source changes do not
 # invalidate dependency layers and keep builds fast.
@@ -21,14 +21,14 @@ COPY src ./src
 # Build the Spring Boot fat jar (skip tests in image build; tests run in dedicated stage)
 # Avoid 'clean' to leverage Gradle incremental compilation across Docker layers
 RUN --mount=type=cache,target=/home/gradle/.gradle \
-    ./gradlew --no-daemon -g /home/gradle/.gradle bootJar -x test
+    gradle --no-daemon -g /home/gradle/.gradle bootJar -x test
 
 ################################################################################
 
 # Dedicated stage to run tests for CI
 FROM build AS test
 RUN --mount=type=cache,target=/home/gradle/.gradle \
-    ./gradlew --no-daemon -g /home/gradle/.gradle test
+    gradle --no-daemon -g /home/gradle/.gradle test
 
 
 ################################################################################
