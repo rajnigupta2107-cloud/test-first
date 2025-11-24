@@ -18,4 +18,10 @@ public class StudentEventPublisherNoop implements StudentEventPublisher {
         log.info("[NO-KAFKA] Student created event: id={}, name={}, email={}",
                 event.getId(), event.getName(), event.getEmail());
     }
+
+    @Override
+    public void publishStudentDeleted(StudentDeletedEvent event) {
+        log.info("[NO-KAFKA] Student deleted event: id={}, name={}, email={}",
+                event.getId(), event.getName(), event.getEmail());
+    }
 }

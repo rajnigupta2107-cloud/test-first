@@ -18,12 +18,12 @@ public class StudentCreatedListener {
     private final String topic;
 
     public StudentCreatedListener(EmailService emailService,
-                                  @Value("${app.kafka.topic:students.created}") String topic) {
+                                  @Value("${app.kafka.topic.created:students.created}") String topic) {
         this.emailService = emailService;
         this.topic = topic;
     }
 
-    @KafkaListener(topics = "#{'${app.kafka.topic:students.created}'}", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "#{'${app.kafka.topic.created:students.created}'}", containerFactory = "kafkaListenerContainerFactory")
     public void onStudentCreated(@Payload StudentCreatedEvent event) {
         log.info("Consumed StudentCreatedEvent: id={}, name={}, email={}", event.getId(), event.getName(), event.getEmail());
         if (event.getEmail() != null) {

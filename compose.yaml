@@ -30,7 +30,11 @@ services:
 
   # Single-node Kafka-compatible broker using Redpanda (lightweight for local dev)
   redpanda:
-    image: docker.redpanda.com/redpanda/redpanda:v24.2.18
+    # Use the official Redpanda image path. The previous path docker.redpanda.com/redpanda/redpanda is invalid.
+    # Alternatives if this registry is blocked:
+    #   - ghcr.io/redpanda-data/redpanda:v24.2.18
+    #   - docker.io/redpandadata/redpanda:v24.2.18
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.18
     command: >-
       redpanda start
       --overprovisioned

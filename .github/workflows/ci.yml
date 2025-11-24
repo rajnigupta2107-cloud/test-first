@@ -42,3 +42,35 @@ jobs:
           push: true
           target: final
           tags: ${{ vars.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest
+
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.30.0'
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBE_CONFIG" > ~/.kube/config
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f docker-java-kubernetes.yaml
+
+      - name: Update image to latest pushed tag
+        env:
+          IMAGE: ${{ vars.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest
+        run: |
+          kubectl set image deployment/docker-java-demo server-service=$IMAGE --namespace default
+          kubectl rollout status deployment/docker-java-demo --namespace default --timeout=120s

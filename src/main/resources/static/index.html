@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student CRUD Demo</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+    h1 { margin-top: 0; }
+    form, table { margin-top: 1rem; }
+    input, button { padding: .4rem .6rem; margin-right: .4rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: .5rem; }
+    tr:nth-child(even) { background: #fafafa; }
+    .muted { color: #666; font-size: .9rem; }
+    .row-actions button { margin-right: .3rem; }
+    footer { margin-top: 2rem; font-size: .9rem; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Student CRUD Demo</h1>
+  <p class="muted">This UI calls the REST API at /students. Creating a student will publish a Kafka event (if enabled) and the listener will send an email.</p>
+
+  <section>
+    <h2>Create Student</h2>
+    <form id="create-form">
+      <input id="name" placeholder="Name" required />
+      <input id="email" placeholder="Email" type="email" required />
+      <button type="submit">Create</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Students</h2>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Name</th><th>Email</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </section>
+
+  <template id="row-template">
+    <tr>
+      <td class="cell-id"></td>
+      <td>
+        <input class="cell-name" />
+      </td>
+      <td>
+        <input class="cell-email" />
+      </td>
+      <td class="row-actions">
+        <button class="save">Save</button>
+        <button class="delete">Delete</button>
+      </td>
+    </tr>
+  </template>
+
+  <footer>
+    <p>Tips:</p>
+    <ul>
+      <li>Kafka can be enabled via environment variable <code>app.kafka.enabled=true</code>. In Docker Compose it's already enabled.</li>
+      <li>Emails are sent via SMTP if configured, or logged to console by default.</li>
+    </ul>
+  </footer>
+
+  <script>
+    const api = {
+      async list() {
+        const res = await fetch('/students');
+        if (!res.ok) throw new Error('Failed to list students');
+        return res.json();
+      },
+      async create(payload) {
+        const res = await fetch('/students', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Failed to create student');
+        return res.json();
+      },
+      async update(id, payload) {
+        const res = await fetch(`/students/${id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Failed to update student');
+        return res.json();
+      },
+      async delete(id) {
+        const res = await fetch(`/students/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete student');
+      }
+    };
+
+    const rowsEl = document.getElementById('rows');
+    const tpl = document.getElementById('row-template');
+
+    async function refresh() {
+      rowsEl.innerHTML = '';
+      const data = await api.list();
+      data.forEach(stu => addRow(stu));
+    }
+
+    function addRow(stu) {
+      const node = tpl.content.cloneNode(true);
+      const tr = node.querySelector('tr');
+      tr.dataset.id = stu.id;
+      tr.querySelector('.cell-id').textContent = stu.id;
+      tr.querySelector('.cell-name').value = stu.name || '';
+      tr.querySelector('.cell-email').value = stu.email || '';
+      tr.querySelector('.save').addEventListener('click', async () => {
+        const name = tr.querySelector('.cell-name').value.trim();
+        const email = tr.querySelector('.cell-email').value.trim();
+        try {
+          await api.update(stu.id, { name, email });
+          await refresh();
+        } catch (e) { alert(e.message); }
+      });
+      tr.querySelector('.delete').addEventListener('click', async () => {
+        if (!confirm('Delete student ' + stu.id + '?')) return;
+        try {
+          await api.delete(stu.id);
+          await refresh();
+        } catch (e) { alert(e.message); }
+      });
+      rowsEl.appendChild(node);
+    }
+
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      if (!name || !email) return;
+      try {
+        await api.create({ name, email });
+        e.target.reset();
+        await refresh();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    refresh().catch(err => console.error(err));
+  </script>
+</body>
+</html>

@@ -29,4 +29,14 @@ public class SmtpEmailService implements EmailService {
         // Helpful confirmation in logs so users can see that email dispatch occurred
         log.info("[SMTP] Sent welcome email to {} (id={})", toEmail, studentId);
     }
+
+    @Override
+    public void sendStudentDeletionEmail(String toEmail, String studentName, Long studentId) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Goodbye, " + studentName);
+        message.setText("Your student record with id=" + studentId + " has been deleted.");
+        mailSender.send(message);
+        log.info("[SMTP] Sent deletion email to {} (id={})", toEmail, studentId);
+    }
 }

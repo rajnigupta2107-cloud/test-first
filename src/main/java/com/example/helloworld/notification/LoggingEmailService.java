@@ -14,4 +14,9 @@ public class LoggingEmailService implements EmailService {
     public void sendStudentWelcomeEmail(String toEmail, String studentName, Long studentId) {
         log.info("[NO-SMTP] Would send welcome email to {} (id={}): Welcome, {}!", toEmail, studentId, studentName);
     }
+
+    @Override
+    public void sendStudentDeletionEmail(String toEmail, String studentName, Long studentId) {
+        log.info("[NO-SMTP] Would send deletion email to {} (id={}): Goodbye, {} — your record was deleted.", toEmail, studentId, studentName);
+    }
 }

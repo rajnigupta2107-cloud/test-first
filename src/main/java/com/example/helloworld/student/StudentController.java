@@ -73,8 +73,15 @@ public class StudentController {
     // Delete by ID
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!repository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found");
+        Student existing = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+        // Publish delete event (no-op if Kafka is disabled)
+        try {
+            eventPublisher.publishStudentDeleted(new com.example.helloworld.messaging.StudentDeletedEvent(
+                    existing.getId(), existing.getName(), existing.getEmail()
+            ));
+        } catch (Exception e) {
+            // Do not fail the request if event publishing fails
         }
         repository.deleteById(id);
         return ResponseEntity.noContent().build();
