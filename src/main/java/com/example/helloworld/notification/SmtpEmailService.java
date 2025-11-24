@@ -1,6 +1,8 @@
 package com.example.helloworld.notification;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -8,6 +10,8 @@ import org.springframework.stereotype.Service;
 @Service
 @ConditionalOnProperty(prefix = "spring.mail", name = "host")
 public class SmtpEmailService implements EmailService {
+
+    private static final Logger log = LoggerFactory.getLogger(SmtpEmailService.class);
 
     private final JavaMailSender mailSender;
 
@@ -22,5 +26,7 @@ public class SmtpEmailService implements EmailService {
         message.setSubject("Welcome, " + studentName + "!");
         message.setText("Your student account was created with id=" + studentId + ". Welcome aboard!");
         mailSender.send(message);
+        // Helpful confirmation in logs so users can see that email dispatch occurred
+        log.info("[SMTP] Sent welcome email to {} (id={})", toEmail, studentId);
     }
 }

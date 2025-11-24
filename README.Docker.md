@@ -54,6 +54,44 @@ Then, push it to your registry, e.g. `docker push myregistry.com/myapp`.
 Consult Docker's [getting started](https://docs.docker.com/go/get-started-sharing/)
 docs for more detail on building and pushing.
 
+### See Kafka events and captured emails locally (Docker Compose)
+
+This project includes optional local developer tooling to observe events and emails:
+
+- Redpanda (Kafka-compatible broker)
+- Kafdrop (web UI to browse topics/messages)
+- MailHog (captures SMTP emails with a web UI)
+
+1) Start the full stack
+- `docker compose up --build -d`
+- Services started:
+  - server (your app) on http://localhost:5001
+  - Redpanda broker on redpanda:9092 (inside) and localhost:19092 (outside)
+  - Kafdrop UI on http://localhost:9000
+  - MailHog UI on http://localhost:8025
+
+2) Create a student to trigger an event and an email
+- `curl -s -X POST -H 'Content-Type: application/json' \
+   -d '{"name":"Alice","email":"alice@example.com"}' http://localhost:5001/students | jq .`
+
+3) View the Kafka event in Kafdrop
+- Open http://localhost:9000
+- Brokers should show as connected (redpanda:9092)
+- Find topic `students.created`
+- Click the topic → View Messages to see the JSON payload
+
+4) View the email in MailHog
+- Open http://localhost:8025
+- You should see a new message sent to `alice@example.com`
+- Click to view details; SMTP is configured via compose to route to MailHog
+
+Notes
+- Kafka is enabled for the compose stack via environment variables in compose.yaml
+  (`app.kafka.enabled=true`, `spring.kafka.bootstrap-servers=redpanda:9092`).
+- Real SMTP is not required; MailHog acts as a local SMTP sink. If you prefer real email,
+  remove MailHog-related mail settings in compose and set your SMTP settings in
+  `application.properties` or environment variables.
+
 ### Share records between local Docker and Kubernetes (two-way)
 
 Goal: Write Student records locally and read them inside a Kubernetes pod, and vice‑versa.

@@ -16,9 +16,53 @@ services:
     environment:
       # Switch to file-based H2 so data is persisted to a mounted volume
       - SPRING_PROFILES_ACTIVE=h2file
+      # Enable Kafka and point to the local broker defined below
+      - app.kafka.enabled=true
+      - spring.kafka.bootstrap-servers=redpanda:9092
+      # Route emails to MailHog (developer SMTP sink)
+      - spring.mail.host=mailhog
+      - spring.mail.port=1025
+      - spring.mail.properties.mail.smtp.auth=false
+      - spring.mail.properties.mail.smtp.starttls.enable=false
     volumes:
       # Persist H2 database files on the host so they can be reused by other containers
       - ./data:/data
+
+  # Single-node Kafka-compatible broker using Redpanda (lightweight for local dev)
+  redpanda:
+    image: docker.redpanda.com/redpanda/redpanda:v24.2.18
+    command: >-
+      redpanda start
+      --overprovisioned
+      --smp 1
+      --memory 512M
+      --reserve-memory 0M
+      --node-id 0
+      --check=false
+      --kafka-addr PLAINTEXT://0.0.0.0:9092,OUTSIDE://0.0.0.0:19092
+      --advertise-kafka-addr PLAINTEXT://redpanda:9092,OUTSIDE://localhost:19092
+    ports:
+      - 9092:9092   # broker (inside network)
+      - 19092:19092 # broker (outside, optional)
+      - 9644:9644   # admin API (optional)
+
+  # Kafka topic browser UI
+  kafdrop:
+    image: obsidiandynamics/kafdrop:4.0.2
+    depends_on:
+      - redpanda
+    environment:
+      KAFKA_BROKERCONNECT: redpanda:9092
+      JVM_OPTS: -Xms32M -Xmx64M
+    ports:
+      - 9000:9000
+
+  # Developer SMTP sink to view emails in a web UI
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - 1025:1025 # SMTP
+      - 8025:8025 # Web UI
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to
