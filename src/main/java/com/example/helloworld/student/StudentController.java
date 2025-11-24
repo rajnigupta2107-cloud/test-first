@@ -1,5 +1,7 @@
 package com.example.helloworld.student;
 
+import com.example.helloworld.messaging.StudentCreatedEvent;
+import com.example.helloworld.messaging.StudentEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -12,9 +14,11 @@ import java.net.URI;
 public class StudentController {
 
     private final StudentRepository repository;
+    private final StudentEventPublisher eventPublisher;
 
-    public StudentController(StudentRepository repository) {
+    public StudentController(StudentRepository repository, StudentEventPublisher eventPublisher) {
         this.repository = repository;
+        this.eventPublisher = eventPublisher;
     }
 
     // Create
@@ -28,6 +32,12 @@ public class StudentController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
         }
         Student saved = repository.save(input);
+        // Publish event (no-op if Kafka is disabled)
+        try {
+            eventPublisher.publishStudentCreated(new StudentCreatedEvent(saved.getId(), saved.getName(), saved.getEmail()));
+        } catch (Exception e) {
+            // Do not fail the request if event publishing fails
+        }
         return ResponseEntity.created(URI.create("/students/" + saved.getId())).body(saved);
     }
 
